@@ -17,23 +17,33 @@ var client = tumblr.createClient({
 });
 
 client.posts('emmabbishop.tumblr.com', function(err, blog){
-	// console.log(blog.posts);
 	var contactList = csvParse(contactCSV);
 	var today = stripTime(new Date());
-	var latestPosts = [];
 
+	var latestPosts = [];
+	var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+	
 	// get latest posts
 	for (var i = 0; i < blog.posts.length; i++) {
 		var postDate = stripTime(new Date(blog.posts[i].date));
-		if ((today - postDate)/(24*60*60*1000) <= 30) {
+		if ((today - postDate)/(24*60*60*1000) <= 7) {
 			latestPosts.push(blog.posts[i]);
 		};
 	};
 
+	// do nothing if there are no new posts to send
+	if(latestPosts.length==0){
+		console.log('no emails to send');
+		return;
+	}
+
+	var dateString = monthNames[today.getMonth()] + ' ' + today.getDate();
+	var emailSubject = 'Update for ' + dateString + ': this week at Grace Hopper Academy';
+
 	// for each contact, add the latest posts property, render the e-mail and send the e-mail
 	for (var i = 0; i<contactList.length; i++){
 		contactPlus = addProperty(contactList[i], 'latestPosts', latestPosts);
-		sendEmail(contactPlus.firstName, contactPlus.emailAddress, 'emma', 'emma.b.bishop@gmail.com', 'New posts from me!', customizedEmail(contactPlus));
+		sendEmail(contactPlus.firstName, contactPlus.emailAddress, 'emma', 'emma.b.bishop@gmail.com', emailSubject, customizedEmail(contactPlus));
 	}
 
 })
@@ -74,7 +84,6 @@ function csvParse (csvFile){
 
 
 function customizedEmail(contact){
-	// console.log(ejs.render(emailTemplate, contact));
 	return ejs.render(emailTemplate, contact);
 }
 
