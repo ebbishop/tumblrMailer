@@ -1,9 +1,13 @@
 var fs = require('fs');
 var ejs = require('ejs');
 var tumblr = require('tumblr.js');
+var mandrill = require('mandrill-api/mandrill');
 
+// import contacts and e-mail template
 var contactCSV = fs.readFileSync('friend_list.csv', 'utf8');
 var emailTemplate = fs.readFileSync('email_template.ejs', 'utf8');
+
+var mandrill_client = new mandrill.Mandrill('_99Rf7n-RD6L3jbdTdzSbQ');
 
 var client = tumblr.createClient({
   consumer_key: 'mbFuHnO6dSTTb6B4vbBDKglevhcMwmdQa0oWXHieSANXy6jfe9',
@@ -17,23 +21,21 @@ client.posts('emmabbishop.tumblr.com', function(err, blog){
 	var contactList = csvParse(contactCSV);
 	var today = stripTime(new Date());
 	var latestPosts = [];
-	var emailArray = [];
+
 	// get latest posts
 	for (var i = 0; i < blog.posts.length; i++) {
 		var postDate = stripTime(new Date(blog.posts[i].date));
-		
 		if ((today - postDate)/(24*60*60*1000) <= 30) {
 			latestPosts.push(blog.posts[i]);
 		};
 	};
 
-
+	// for each contact, add the latest posts property, render the e-mail and send the e-mail
 	for (var i = 0; i<contactList.length; i++){
 		contactPlus = addProperty(contactList[i], 'latestPosts', latestPosts);
-		emailArray.push(customizedEmail(contactPlus));
+		sendEmail(contactPlus.firstName, contactPlus.emailAddress, 'emma', 'emma.b.bishop@gmail.com', 'New posts from me!', customizedEmail(contactPlus));
 	}
 
-	console.log(emailArray);
 })
 
 
@@ -89,3 +91,34 @@ function addProperty(obj, propertyName, property){
 	obj[propertyName] = property;
 	return obj;
 }
+
+function sendEmail(to_name, to_email, from_name, from_email, subject, message_html){
+    var message = {
+        "html": message_html,
+        "subject": subject,
+        "from_email": from_email,
+        "from_name": from_name,
+        "to": [{
+                "email": to_email,
+                "name": to_name
+            }],
+        "important": false,
+        "track_opens": true,    
+        "auto_html": false,
+        "preserve_recipients": true,
+        "merge": false,
+        "tags": [
+            "Fullstack_Tumblrmailer_Workshop"
+        ]    
+    };
+    var async = false;
+    var ip_pool = "Main Pool";
+    mandrill_client.messages.send({"message": message, "async": async, "ip_pool": ip_pool}, function(result) {
+        // console.log(message);
+        // console.log(result);   
+    }, function(e) {
+        // Mandrill returns the error as an object with name and message keys
+        console.log('A mandrill error occurred: ' + e.name + ' - ' + e.message);
+        // A mandrill error occurred: Unknown_Subaccount - No subaccount exists with the id 'customer-123'
+    });
+ }
