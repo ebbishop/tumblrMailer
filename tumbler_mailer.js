@@ -2,7 +2,7 @@ var fs = require('fs');
 var ejs = require('ejs');
 var tumblr = require('tumblr.js');
 
-var csvFile = fs.readFileSync('friend_list.csv', 'utf8');
+var contactCSV = fs.readFileSync('friend_list.csv', 'utf8');
 var emailTemplate = fs.readFileSync('email_template.ejs', 'utf8');
 
 var client = tumblr.createClient({
@@ -13,11 +13,32 @@ var client = tumblr.createClient({
 });
 
 client.posts('emmabbishop.tumblr.com', function(err, blog){
-  // console.log(blog);
+	// console.log(blog.posts);
+	var contactList = csvParse(contactCSV);
+	var today = stripTime(new Date());
+	var latestPosts = [];
+	var emailArray = [];
+	// get latest posts
+	for (var i = 0; i < blog.posts.length; i++) {
+		var postDate = stripTime(new Date(blog.posts[i].date));
+		
+		if ((today - postDate)/(24*60*60*1000) <= 30) {
+			latestPosts.push(blog.posts[i]);
+		};
+	};
+
+
+	for (var i = 0; i<contactList.length; i++){
+		contactPlus = addProperty(contactList[i], 'latestPosts', latestPosts);
+		emailArray.push(customizedEmail(contactPlus));
+	}
+
+	console.log(emailArray);
 })
 
 
 function csvParse (csvFile){
+
 	// removes a newline at the end of the file
 	if(csvFile.charCodeAt(csvFile.length-1)==10){
 		csvFile = csvFile.slice(0,csvFile.length-1);
@@ -50,15 +71,21 @@ function csvParse (csvFile){
 }
 
 
-var parsedCSV = csvParse(csvFile);
-// console.log(parsedCSV);
-
-
-var customizedTemplate = function(contact){
-	console.log(ejs.render(emailTemplate, contact));
+function customizedEmail(contact){
+	// console.log(ejs.render(emailTemplate, contact));
 	return ejs.render(emailTemplate, contact);
 }
 
-for (var i = 0; i<parsedCSV.length; i++){
-	customizedTemplate(parsedCSV[i]);
+
+function stripTime(myDate){
+	myDate.setHours(0);
+	myDate.setMinutes(0);
+	myDate.setSeconds(0);
+	myDate.setMilliseconds(0);
+	return myDate;
+}
+
+function addProperty(obj, propertyName, property){
+	obj[propertyName] = property;
+	return obj;
 }
