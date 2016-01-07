@@ -1,7 +1,21 @@
 var fs = require('fs');
+var ejs = require('ejs');
+var tumblr = require('tumblr.js');
 
 var csvFile = fs.readFileSync('friend_list.csv', 'utf8');
-var emailTemplate = fs.readFileSync('email_template.html', 'utf8');
+var emailTemplate = fs.readFileSync('email_template.ejs', 'utf8');
+
+var client = tumblr.createClient({
+  consumer_key: 'mbFuHnO6dSTTb6B4vbBDKglevhcMwmdQa0oWXHieSANXy6jfe9',
+  consumer_secret: '2ps1QFa5Flg0d5UiMa55IDzLe8LK6DvJdKYPTUpxDVPCM7zPwo',
+  token: '2SPFT0Mi485YItmCobufANXOGgqNaVd3A3K9DDC0vkkyoTiLtR',
+  token_secret: '681LL2Z284Ug2hFHO8sGXBftXDEUGkwbiptqtPcEgg56Cbh6Bd'
+});
+
+client.posts('emmabbishop.tumblr.com', function(err, blog){
+  // console.log(blog);
+})
+
 
 function csvParse (csvFile){
 	// removes a newline at the end of the file
@@ -39,20 +53,12 @@ function csvParse (csvFile){
 var parsedCSV = csvParse(csvFile);
 // console.log(parsedCSV);
 
-function personalizeEmail(parsedCSV, emailTemplate){
-	emailArr = [];
-	replaceThis = {'FIRST_NAME': 'firstName', 'NUM_MONTHS_SINCE_CONTACT': 'numMonthsSinceContact'};
-	for (var i = 0; i < parsedCSV.length; i++) {
-		var email = emailTemplate;
-		for (var key in replaceThis) {
-			// console.log(key);
-			// console.log(parsedCSV[i][replaceThis[key]]);
-			email = email.replace(key, parsedCSV[i][replaceThis[key]])
-		};
-		emailArr.push(email);
-	};
-	return emailArr;
+
+var customizedTemplate = function(contact){
+	console.log(ejs.render(emailTemplate, contact));
+	return ejs.render(emailTemplate, contact);
 }
 
-allEmails = personalizeEmail(parsedCSV,emailTemplate);
-// console.log(allEmails);
+for (var i = 0; i<parsedCSV.length; i++){
+	customizedTemplate(parsedCSV[i]);
+}
